@@ -2,126 +2,109 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Click and Drag</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-    }
-    .items {
+    .container {
       width: 500px;
       height: 500px;
       position: relative;
-      border: 2px solid black;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      padding: 5px;
+      border: 2px solid #000;
+      margin: 20px auto;
+      overflow: hidden;
     }
-    .item {
+    .cube {
       width: 60px;
       height: 60px;
-      background-color: lightblue;
+      background: lightblue;
+      position: absolute;
+      cursor: grab;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
-      font-weight: bold;
-      cursor: grab;
-      position: absolute;
-      transition: transform 0.1s ease-in-out;
+      user-select: none;
+      transition: none;
     }
-    .item.active {
+    .cube.active {
       cursor: grabbing;
       opacity: 0.7;
     }
   </style>
 </head>
 <body>
-  <div class="items" id="container">
-    <!-- Items will be generated dynamically -->
+  <div class="container" id="container">
+    <!-- Cubes will be generated dynamically -->
   </div>
-
+  
   <script>
-    const container = document.getElementById("container");
+    const container = document.getElementById('container');
+    const cubeSize = 60; // width and height of each cube
+    const gap = 10;      // gap between cubes in the grid
+    // Calculate how many cubes fit in one row
+    const cubesPerRow = Math.floor((container.clientWidth + gap) / (cubeSize + gap));
+    const totalCubes = 25; // change this to generate any number of cubes
+
+    // Create cubes in a grid formation
+    for (let i = 0; i < totalCubes; i++) {
+      const cube = document.createElement('div');
+      cube.className = 'cube';
+      cube.textContent = i + 1;
+      // Calculate initial left and top positions
+      const col = i % cubesPerRow;
+      const row = Math.floor(i / cubesPerRow);
+      cube.style.left = (col * (cubeSize + gap)) + 'px';
+      cube.style.top = (row * (cubeSize + gap)) + 'px';
+      container.appendChild(cube);
+    }
+    
     let isDragging = false;
     let currentCube = null;
-    let offsetX, offsetY, startX, startY;
-
-    // Dynamically create 25 items
-    for (let i = 1; i <= 25; i++) {
-      const item = document.createElement("div");
-      item.classList.add("item");
-      item.textContent = i;
-
-      // Set initial position using transform
-      const x = (i - 1) % 5 * 70;
-      const y = Math.floor((i - 1) / 5) * 70;
-      item.dataset.x = x;
-      item.dataset.y = y;
-      item.style.transform = `translate(${x}px, ${y}px)`;
-
-      container.appendChild(item);
-    }
-
-    container.addEventListener("pointerdown", (e) => {
-      if (!e.target.classList.contains("item")) return;
-
-      isDragging = true;
-      currentCube = e.target;
-      currentCube.classList.add("active");
-
-      startX = e.clientX;
-      startY = e.clientY;
-
-      const rect = currentCube.getBoundingClientRect();
-      offsetX = e.clientX - rect.left;
-      offsetY = e.clientY - rect.top;
-
-      document.addEventListener("pointermove", onPointerMove);
-      document.addEventListener("pointerup", onPointerUp);
+    let offsetX = 0, offsetY = 0;
+    
+    // Attach mousedown event listener to each cube for selection
+    const cubes = document.querySelectorAll('.cube');
+    cubes.forEach(cube => {
+      cube.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        currentCube = cube;
+        currentCube.classList.add('active');
+        // Get the cube's current bounding rectangle and calculate offset
+        const rect = currentCube.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+      });
     });
-
-    function onPointerMove(e) {
+    
+    // Update the cube's position based on mouse movement
+    document.addEventListener('mousemove', (e) => {
       if (!isDragging || !currentCube) return;
+      e.preventDefault(); // Prevent unwanted text selection
 
-      let newX = e.clientX - offsetX;
-      let newY = e.clientY - offsetY;
-
+      // Get container's position for calculating relative coordinates
       const containerRect = container.getBoundingClientRect();
-      const cubeRect = currentCube.getBoundingClientRect();
-
-      newX = Math.max(containerRect.left, Math.min(newX, containerRect.right - cubeRect.width));
-      newY = Math.max(containerRect.top, Math.min(newY, containerRect.bottom - cubeRect.height));
-
-      currentCube.style.transform = `translate(${newX - containerRect.left}px, ${newY - containerRect.top}px)`;
-    }
-
-    function onPointerUp(e) {
-      if (!isDragging || !currentCube) return;
-
-      isDragging = false;
-      currentCube.classList.remove("active");
-
-      const dropCube = document.elementFromPoint(e.clientX, e.clientY);
-      if (dropCube && dropCube.classList.contains("item") && dropCube !== currentCube) {
-        // Swap positions using transform
-        let tempX = currentCube.dataset.x;
-        let tempY = currentCube.dataset.y;
-
-        currentCube.dataset.x = dropCube.dataset.x;
-        currentCube.dataset.y = dropCube.dataset.y;
-        currentCube.style.transform = `translate(${dropCube.dataset.x}px, ${dropCube.dataset.y}px)`;
-
-        dropCube.dataset.x = tempX;
-        dropCube.dataset.y = tempY;
-        dropCube.style.transform = `translate(${tempX}px, ${tempY}px)`;
+      let newLeft = e.clientX - containerRect.left - offsetX;
+      let newTop = e.clientY - containerRect.top - offsetY;
+      
+      // Enforce boundary constraints within the container
+      if (newLeft < 0) newLeft = 0;
+      if (newTop < 0) newTop = 0;
+      const maxLeft = container.clientWidth - currentCube.offsetWidth;
+      const maxTop = container.clientHeight - currentCube.offsetHeight;
+      if (newLeft > maxLeft) newLeft = maxLeft;
+      if (newTop > maxTop) newTop = maxTop;
+      
+      // Update cube's position
+      currentCube.style.left = newLeft + 'px';
+      currentCube.style.top = newTop + 'px';
+    });
+    
+    // When the mouse is released, stop dragging
+    document.addEventListener('mouseup', () => {
+      if (isDragging && currentCube) {
+        isDragging = false;
+        currentCube.classList.remove('active');
+        currentCube = null;
       }
-
-      currentCube = null;
-      document.removeEventListener("pointermove", onPointerMove);
-      document.removeEventListener("pointerup", onPointerUp);
-    }
+    });
   </script>
 </body>
 </html>
