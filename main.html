@@ -29,6 +29,7 @@
       font-weight: bold;
       cursor: grab;
       position: absolute;
+      transition: transform 0.1s ease-in-out;
     }
     .item.active {
       cursor: grabbing;
@@ -45,73 +46,81 @@
     const container = document.getElementById("container");
     let isDragging = false;
     let currentCube = null;
-    let offsetX, offsetY;
-    
+    let offsetX, offsetY, startX, startY;
+
     // Dynamically create 25 items
     for (let i = 1; i <= 25; i++) {
       const item = document.createElement("div");
       item.classList.add("item");
       item.textContent = i;
-      // Set initial position
-      item.style.left = `${(i - 1) % 5 * 70}px`;
-      item.style.top = `${Math.floor((i - 1) / 5) * 70}px`;
+
+      // Set initial position using transform
+      const x = (i - 1) % 5 * 70;
+      const y = Math.floor((i - 1) / 5) * 70;
+      item.dataset.x = x;
+      item.dataset.y = y;
+      item.style.transform = `translate(${x}px, ${y}px)`;
+
       container.appendChild(item);
     }
-    
-    const items = document.querySelectorAll(".item");
-    items.forEach(cube => {
-      cube.addEventListener("mousedown", (e) => {
-        isDragging = true;
-        currentCube = e.target;
-        currentCube.classList.add("active");
-        
-        const rect = currentCube.getBoundingClientRect();
-        offsetX = e.clientX - rect.left;
-        offsetY = e.clientY - rect.top;
-        
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-      });
+
+    container.addEventListener("pointerdown", (e) => {
+      if (!e.target.classList.contains("item")) return;
+
+      isDragging = true;
+      currentCube = e.target;
+      currentCube.classList.add("active");
+
+      startX = e.clientX;
+      startY = e.clientY;
+
+      const rect = currentCube.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+
+      document.addEventListener("pointermove", onPointerMove);
+      document.addEventListener("pointerup", onPointerUp);
     });
-    
-    function onMouseMove(e) {
-      if (isDragging && currentCube) {
-        let newX = e.clientX - offsetX;
-        let newY = e.clientY - offsetY;
 
-        const containerRect = container.getBoundingClientRect();
-        const cubeRect = currentCube.getBoundingClientRect();
+    function onPointerMove(e) {
+      if (!isDragging || !currentCube) return;
 
-        newX = Math.max(containerRect.left, Math.min(newX, containerRect.right - cubeRect.width));
-        newY = Math.max(containerRect.top, Math.min(newY, containerRect.bottom - cubeRect.height));
+      let newX = e.clientX - offsetX;
+      let newY = e.clientY - offsetY;
 
-        currentCube.style.left = `${newX - containerRect.left}px`;
-        currentCube.style.top = `${newY - containerRect.top}px`;
-      }
+      const containerRect = container.getBoundingClientRect();
+      const cubeRect = currentCube.getBoundingClientRect();
+
+      newX = Math.max(containerRect.left, Math.min(newX, containerRect.right - cubeRect.width));
+      newY = Math.max(containerRect.top, Math.min(newY, containerRect.bottom - cubeRect.height));
+
+      currentCube.style.transform = `translate(${newX - containerRect.left}px, ${newY - containerRect.top}px)`;
     }
-    
-    function onMouseUp(e) {
-      if (isDragging && currentCube) {
-        isDragging = false;
-        currentCube.classList.remove("active");
-        
-        const dropCube = document.elementFromPoint(e.clientX, e.clientY);
-        if (dropCube && dropCube.classList.contains("item") && dropCube !== currentCube) {
-          // Swap positions
-          let tempX = currentCube.style.left;
-          let tempY = currentCube.style.top;
 
-          currentCube.style.left = dropCube.style.left;
-          currentCube.style.top = dropCube.style.top;
+    function onPointerUp(e) {
+      if (!isDragging || !currentCube) return;
 
-          dropCube.style.left = tempX;
-          dropCube.style.top = tempY;
-        }
-        
-        currentCube = null;
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
+      isDragging = false;
+      currentCube.classList.remove("active");
+
+      const dropCube = document.elementFromPoint(e.clientX, e.clientY);
+      if (dropCube && dropCube.classList.contains("item") && dropCube !== currentCube) {
+        // Swap positions using transform
+        let tempX = currentCube.dataset.x;
+        let tempY = currentCube.dataset.y;
+
+        currentCube.dataset.x = dropCube.dataset.x;
+        currentCube.dataset.y = dropCube.dataset.y;
+        currentCube.style.transform = `translate(${dropCube.dataset.x}px, ${dropCube.dataset.y}px)`;
+
+        dropCube.dataset.x = tempX;
+        dropCube.dataset.y = tempY;
+        dropCube.style.transform = `translate(${tempX}px, ${tempY}px)`;
       }
+
+      currentCube = null;
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", onPointerUp);
     }
   </script>
 </body>
