@@ -2,41 +2,117 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Click and Drag</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    .items {
+      width: 500px;
+      height: 500px;
+      position: relative;
+      border: 2px solid black;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 5px;
+    }
+    .item {
+      width: 60px;
+      height: 60px;
+      background-color: lightblue;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: grab;
+      position: absolute;
+    }
+    .item.active {
+      cursor: grabbing;
+      opacity: 0.7;
+    }
+  </style>
 </head>
 <body>
-  <div class="items">
-    <div class="item item1">01</div>
-    <div class="item item2">02</div>
-    <div class="item item3">03</div>
-    <div class="item item4">04</div>
-    <div class="item item5">05</div>
-    <div class="item item6">06</div>
-    <div class="item item7">07</div>
-    <div class="item item8">08</div>
-    <div class="item item9">09</div>
-    <div class="item item10">10</div>
-    <div class="item item11">11</div>
-    <div class="item item12">12</div>
-    <div class="item item13">13</div>
-    <div class="item item14">14</div>
-    <div class="item item15">15</div>
-    <div class="item item16">16</div>
-    <div class="item item17">17</div>
-    <div class="item item18">18</div>
-    <div class="item item19">19</div>
-    <div class="item item20">20</div>
-    <div class="item item21">21</div>
-    <div class="item item22">22</div>
-    <div class="item item23">23</div>
-    <div class="item item24">24</div>
-    <div class="item item25">25</div>
+  <div class="items" id="container">
+    <!-- Items will be generated dynamically -->
   </div>
 
-<script>
-//Your code goes here 
-</script>
+  <script>
+    const container = document.getElementById("container");
+    let isDragging = false;
+    let currentCube = null;
+    let offsetX, offsetY;
+    
+    // Dynamically create 25 items
+    for (let i = 1; i <= 25; i++) {
+      const item = document.createElement("div");
+      item.classList.add("item");
+      item.textContent = i;
+      // Set initial position
+      item.style.left = `${(i - 1) % 5 * 70}px`;
+      item.style.top = `${Math.floor((i - 1) / 5) * 70}px`;
+      container.appendChild(item);
+    }
+    
+    const items = document.querySelectorAll(".item");
+    items.forEach(cube => {
+      cube.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        currentCube = e.target;
+        currentCube.classList.add("active");
+        
+        const rect = currentCube.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+        
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+      });
+    });
+    
+    function onMouseMove(e) {
+      if (isDragging && currentCube) {
+        let newX = e.clientX - offsetX;
+        let newY = e.clientY - offsetY;
 
-  </body>
+        const containerRect = container.getBoundingClientRect();
+        const cubeRect = currentCube.getBoundingClientRect();
+
+        newX = Math.max(containerRect.left, Math.min(newX, containerRect.right - cubeRect.width));
+        newY = Math.max(containerRect.top, Math.min(newY, containerRect.bottom - cubeRect.height));
+
+        currentCube.style.left = `${newX - containerRect.left}px`;
+        currentCube.style.top = `${newY - containerRect.top}px`;
+      }
+    }
+    
+    function onMouseUp(e) {
+      if (isDragging && currentCube) {
+        isDragging = false;
+        currentCube.classList.remove("active");
+        
+        const dropCube = document.elementFromPoint(e.clientX, e.clientY);
+        if (dropCube && dropCube.classList.contains("item") && dropCube !== currentCube) {
+          // Swap positions
+          let tempX = currentCube.style.left;
+          let tempY = currentCube.style.top;
+
+          currentCube.style.left = dropCube.style.left;
+          currentCube.style.top = dropCube.style.top;
+
+          dropCube.style.left = tempX;
+          dropCube.style.top = tempY;
+        }
+        
+        currentCube = null;
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      }
+    }
+  </script>
+</body>
 </html>
